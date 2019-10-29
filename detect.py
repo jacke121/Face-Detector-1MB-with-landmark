@@ -17,19 +17,19 @@ from utils.timer import Timer
 
 
 parser = argparse.ArgumentParser(description='Test')
-parser.add_argument('-m', '--trained_model', default='./weights/RBF_Final.pth',
-                    type=str, help='Trained state_dict file path to open')
-parser.add_argument('--network', default='RFB', help='Backbone network mobile0.25 or slim or RFB')
+# parser.add_argument('-m', '--trained_model', default='./weights/RBF_Final.pth')
+parser.add_argument('--trained_model', default='./weights/mobilenet0.25_Final.pth')
+parser.add_argument('--network', default='mobile0.25', help='Backbone network mobile0.25 or slim or RFB')
 parser.add_argument('--origin_size', default=True, type=str, help='Whether use origin image size to evaluate')
 parser.add_argument('--long_side', default=640, help='when origin_size is false, long_side is scaled size(320 or 640 for long side)')
 parser.add_argument('--save_folder', default='./widerface_evaluate/widerface_txt/', type=str, help='Dir to save txt results')
 parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
-parser.add_argument('--confidence_threshold', default=0.02, type=float, help='confidence_threshold')
-parser.add_argument('--top_k', default=5000, type=int, help='top_k')
-parser.add_argument('--nms_threshold', default=0.4, type=float, help='nms_threshold')
-parser.add_argument('--keep_top_k', default=750, type=int, help='keep_top_k')
+parser.add_argument('--confidence_threshold', default=0.98, type=float, help='confidence_threshold')
+parser.add_argument('--top_k', default=15, type=int, help='top_k')
+parser.add_argument('--nms_threshold', default=0.2, type=float, help='nms_threshold')
+parser.add_argument('--keep_top_k', default=12, type=int, help='keep_top_k')
 parser.add_argument('--save_image', action="store_true", default=True, help='show detection results')
-parser.add_argument('--vis_thres', default=0.6, type=float, help='visualization_threshold')
+parser.add_argument('--vis_thres', default=0.9, type=float, help='visualization_threshold')
 args = parser.parse_args()
 
 
@@ -90,16 +90,23 @@ if __name__ == '__main__':
     net = load_model(net, args.trained_model, args.cpu)
     net.eval()
     print('Finished loading model!')
-    print(net)
+    # print(net)
     cudnn.benchmark = True
     device = torch.device("cpu" if args.cpu else "cuda")
     net = net.to(device)
+    vc = cv2.VideoCapture(0)  # 读入视频文件
+    rval, img_raw = vc.read()
+    im_height, im_width, _ = img_raw.shape
+    scale = torch.Tensor([im_width, im_height, im_width, im_height])
+    scale = scale.to(device)
+    priorbox = PriorBox(cfg, image_size=(im_height, im_width))
+    priors = priorbox.forward()
+    priors = priors.to(device)
 
     # testing begin
-    for i in range(100):
-        image_path = "./img/sample.jpg"
-
-        img_raw = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    while True:  # 循环读取视频帧
+        rval, img_raw = vc.read()
+        start = time.time()
         img = np.float32(img_raw)
 
         # testing scale
@@ -108,35 +115,22 @@ if __name__ == '__main__':
         im_shape = img.shape
         im_size_min = np.min(im_shape[0:2])
         im_size_max = np.max(im_shape[0:2])
-        resize = float(target_size) / float(im_size_min)
-        # prevent bigger axis from being more than max_size:
-        if np.round(resize * im_size_max) > max_size:
-            resize = float(max_size) / float(im_size_max)
-        if args.origin_size:
-            resize = 1
-
-        if resize != 1:
-            img = cv2.resize(img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
         im_height, im_width, _ = img.shape
 
-
-        scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
         img -= (104, 117, 123)
         img = img.transpose(2, 0, 1)
         img = torch.from_numpy(img).unsqueeze(0)
         img = img.to(device)
         scale = scale.to(device)
 
-        tic = time.time()
-        loc, conf, landms = net(img)  # forward pass
-        print('net forward time: {:.4f}'.format(time.time() - tic))
 
-        priorbox = PriorBox(cfg, image_size=(im_height, im_width))
-        priors = priorbox.forward()
-        priors = priors.to(device)
+        loc, conf, landms = net(img)  # forward pass
+
+        time_2 = time.time()
+
         prior_data = priors.data
         boxes = decode(loc.data.squeeze(0), prior_data, cfg['variance'])
-        boxes = boxes * scale / resize
+        boxes = boxes * scale
         boxes = boxes.cpu().numpy()
         scores = conf.squeeze(0).data.cpu().numpy()[:, 1]
         landms = decode_landm(landms.data.squeeze(0), prior_data, cfg['variance'])
@@ -144,7 +138,7 @@ if __name__ == '__main__':
                                img.shape[3], img.shape[2], img.shape[3], img.shape[2],
                                img.shape[3], img.shape[2]])
         scale1 = scale1.to(device)
-        landms = landms * scale1 / resize
+        landms = landms * scale1
         landms = landms.cpu().numpy()
 
         # ignore low scores
@@ -172,6 +166,7 @@ if __name__ == '__main__':
 
         dets = np.concatenate((dets, landms), axis=1)
 
+        print('detect time', time_2 - start, time.time() - start, im_height, im_width)
         # show image
         if args.save_image:
             for b in dets:
@@ -192,7 +187,7 @@ if __name__ == '__main__':
                 cv2.circle(img_raw, (b[11], b[12]), 1, (0, 255, 0), 4)
                 cv2.circle(img_raw, (b[13], b[14]), 1, (255, 0, 0), 4)
             # save image
+            cv2.imshow("face", img_raw)
+            cv2.waitKey(1)
 
-            name = "test.jpg"
-            cv2.imwrite(name, img_raw)
 

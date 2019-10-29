@@ -1,7 +1,7 @@
 //
 // Created by dl on 19-7-19.
 //
-
+#define NOMINMAX
 #ifndef FACE_DETECTOR_H
 #define FACE_DETECTOR_H
 
@@ -88,6 +88,7 @@ public:
     float _nms;
     float _threshold;
     float _mean_val[3];
+	std::vector<box> anchor;
 
     ncnn::Net *Net;
 };

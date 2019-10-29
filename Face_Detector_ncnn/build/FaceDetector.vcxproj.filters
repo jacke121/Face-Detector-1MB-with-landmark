@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="D:\project\face\Face-Detector-1MB-with-landmark\Face_Detector_ncnn\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\project\face\Face-Detector-1MB-with-landmark\Face_Detector_ncnn\FaceDetector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="D:\project\face\Face-Detector-1MB-with-landmark\Face_Detector_ncnn\FaceDetector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\project\face\Face-Detector-1MB-with-landmark\Face_Detector_ncnn\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{37C4532B-F360-3DE0-A668-A0DB198E0CEA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{5540605D-2D75-3F24-A801-2CD1F0ED2F66}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

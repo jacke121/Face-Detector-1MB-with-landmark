@@ -31,6 +31,11 @@ void Detector::Init(const std::string &model_param, const std::string &model_bin
 {
     int ret = Net->load_param(model_param.c_str());
     ret = Net->load_model(model_bin.c_str());
+
+	Timer timer;
+	timer.tic();
+	create_anchor(anchor, 320, 240);
+	timer.toc("anchor:");
 }
 
 void Detector::Detect(cv::Mat& bgr, std::vector<bbox>& boxes)
@@ -57,11 +62,6 @@ void Detector::Detect(cv::Mat& bgr, std::vector<bbox>& boxes)
     ex.extract("529", out2);
 
     timer.toc("det:");
-
-    std::vector<box> anchor;
-    timer.tic();
-    create_anchor(anchor,  bgr.cols, bgr.rows);
-    timer.toc("anchor:");
 
     std::vector<bbox > total_box;
     float *ptr = out.channel(0);
